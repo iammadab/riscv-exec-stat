@@ -73,17 +73,7 @@ fn dec_c_addi4spn(insn: u16) -> Instruction {
 }
 
 fn dec_c_fld(insn: u16) -> Instruction {
-    // rd' insn[4:2]
-    // rd = rd' + 8
-    let rd = (((insn >> 2) & mask16(3)) + 8) as u8;
-
-    // rs1' insn[9:7]
-    // rs1 = rs1' + 8
-    let rs1 = (((insn >> 7) & mask16(3)) + 8) as u8;
-
-    let imm = imm_cl_d(insn);
-
-    Instruction::Fld(I { rd, rs1, imm })
+    Instruction::Illegal(insn as u32)
 }
 
 fn dec_c_lw(insn: u16) -> Instruction {
@@ -115,17 +105,7 @@ fn dec_c_ld(insn: u16) -> Instruction {
 }
 
 fn dec_c_fsd(insn: u16) -> Instruction {
-    // rs1' insn[9:7]
-    // rs1 = rs1' + 8
-    let rs1 = (((insn >> 7) & mask16(3)) + 8) as u8;
-
-    // rs2' insn[4:2]
-    // rs2 = rd' + 8
-    let rs2 = (((insn >> 2) & mask16(3)) + 8) as u8;
-
-    let imm = imm_cl_d(insn);
-
-    Instruction::Fsd(S { rs1, rs2, imm })
+    Instruction::Illegal(insn as u32)
 }
 
 fn dec_c_sw(insn: u16) -> Instruction {
@@ -332,9 +312,7 @@ fn dec_c_slli(insn: u16) -> Instruction {
 }
 
 fn dec_c_fldsp(insn: u16) -> Instruction {
-    let rd = ((insn >> 7) & mask16(5)) as u8;
-    let imm = imm_csp_d_load(insn);
-    Instruction::Fld(I { rd, rs1: 2, imm })
+    Instruction::Illegal(insn as u32)
 }
 
 fn dec_c_lwsp(insn: u16) -> Instruction {
@@ -416,9 +394,7 @@ fn dec_c_jr_jalr_mv_add(insn: u16) -> Instruction {
 }
 
 fn dec_c_fsdsp(insn: u16) -> Instruction {
-    let rs2 = ((insn >> 2) & mask16(5)) as u8;
-    let imm = imm_css_d(insn);
-    Instruction::Fsd(S { rs1: 2, rs2, imm })
+    Instruction::Illegal(insn as u32)
 }
 
 fn dec_c_swsp(insn: u16) -> Instruction {
@@ -456,25 +432,11 @@ mod tests {
     fn test_c_fld() {
         let compressed_instruction = 0x2000;
         let insn = decode_compressed(compressed_instruction);
-        assert_eq!(
-            insn,
-            Instruction::Fld(I {
-                rd: 8,
-                rs1: 8,
-                imm: 0
-            })
-        );
+        assert_eq!(insn, Instruction::Illegal(compressed_instruction as u32));
 
         let compressed_instruction = 0x2400;
         let insn = decode_compressed(compressed_instruction);
-        assert_eq!(
-            insn,
-            Instruction::Fld(I {
-                rd: 8,
-                rs1: 8,
-                imm: 8
-            })
-        );
+        assert_eq!(insn, Instruction::Illegal(compressed_instruction as u32));
     }
 
     #[test]
@@ -506,25 +468,11 @@ mod tests {
     fn test_c_fsd() {
         let ci: u16 = 0xA000;
         let insn = decode_compressed(ci);
-        assert_eq!(
-            insn,
-            Instruction::Fsd(S {
-                rs1: 8,
-                rs2: 8,
-                imm: 0
-            })
-        );
+        assert_eq!(insn, Instruction::Illegal(ci as u32));
 
         let ci: u16 = 0xA040;
         let insn = decode_compressed(ci);
-        assert_eq!(
-            insn,
-            Instruction::Fsd(S {
-                rs1: 8,
-                rs2: 8,
-                imm: 128
-            })
-        );
+        assert_eq!(insn, Instruction::Illegal(ci as u32));
     }
 
     #[test]

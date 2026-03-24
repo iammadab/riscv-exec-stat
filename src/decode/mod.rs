@@ -9,8 +9,8 @@ mod util;
 mod zicsr;
 
 pub(crate) use insn::Instruction;
-pub(crate) use insn_formats::{Sh, B, I, J, R, R4, RF, S, U};
-use util::{funct3, opcode};
+pub(crate) use insn_formats::{Sh, B, I, J, R, S, U};
+use util::opcode;
 
 pub(crate) fn decode(insn: u32) -> Instruction {
     match opcode(insn) {
