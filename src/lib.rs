@@ -7,7 +7,6 @@ mod instr_execute;
 mod loader;
 mod memory;
 mod runner;
-mod trace;
 mod util;
 mod vm;
 

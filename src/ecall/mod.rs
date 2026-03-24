@@ -1,11 +1,11 @@
-use crate::{HostIO, VM, trace::Tracer};
+use crate::{HostIO, VM};
 
 pub mod constants;
 mod halt;
 mod stdin;
 mod stdout;
 
-pub fn handle_ecall<T: Tracer>(vm: &mut VM<T>, io: &mut HostIO) {
+pub fn handle_ecall(vm: &mut VM, io: &mut HostIO) {
     let func = vm.reg(17);
 
     match func {

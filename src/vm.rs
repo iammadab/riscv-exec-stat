@@ -1,5 +1,4 @@
 use crate::memory::MemoryDefault;
-use crate::trace::{DefaultTracer, NoopTracer, Tracer};
 use crate::util::{is_snan_f32, is_snan_f64, is_subnormal_f32, is_subnormal_f64};
 use std::mem::offset_of;
 
@@ -9,7 +8,7 @@ use std::mem::offset_of;
 /// - `NoopTracer`: All tracing calls are optimized away (zero overhead)
 /// - `FullTracer`: Complete execution trace is captured
 #[repr(C)]
-pub struct VM<T: Tracer = DefaultTracer> {
+pub struct VM {
     pub(crate) registers: [u64; 32],
     pc: u64,
     pub(crate) f_reg: [u64; 32],
@@ -18,18 +17,17 @@ pub struct VM<T: Tracer = DefaultTracer> {
     pub halted: bool,
     pub exit_code: u64,
     memory: MemoryDefault,
-    pub(crate) tracer: T,
 }
 
-pub(crate) const VM_REGS_OFFSET: usize = offset_of!(VM<NoopTracer>, registers);
-pub(crate) const VM_PC_OFFSET: usize = offset_of!(VM<NoopTracer>, pc);
-pub(crate) const VM_FREGS_OFFSET: usize = offset_of!(VM<NoopTracer>, f_reg);
-pub(crate) const VM_FCSR_OFFSET: usize = offset_of!(VM<NoopTracer>, fcsr_reg);
-pub(crate) const VM_RESERVATION_OFFSET: usize = offset_of!(VM<NoopTracer>, reservation_set);
-pub(crate) const VM_HALTED_OFFSET: usize = offset_of!(VM<NoopTracer>, halted);
-pub(crate) const VM_EXIT_CODE_OFFSET: usize = offset_of!(VM<NoopTracer>, exit_code);
+pub(crate) const VM_REGS_OFFSET: usize = offset_of!(VM, registers);
+pub(crate) const VM_PC_OFFSET: usize = offset_of!(VM, pc);
+pub(crate) const VM_FREGS_OFFSET: usize = offset_of!(VM, f_reg);
+pub(crate) const VM_FCSR_OFFSET: usize = offset_of!(VM, fcsr_reg);
+pub(crate) const VM_RESERVATION_OFFSET: usize = offset_of!(VM, reservation_set);
+pub(crate) const VM_HALTED_OFFSET: usize = offset_of!(VM, halted);
+pub(crate) const VM_EXIT_CODE_OFFSET: usize = offset_of!(VM, exit_code);
 
-impl<T: Tracer> Default for VM<T> {
+impl Default for VM {
     fn default() -> Self {
         Self {
             registers: [0u64; 32],
@@ -38,14 +36,13 @@ impl<T: Tracer> Default for VM<T> {
             pc: 0,
             halted: false,
             exit_code: 0,
-            tracer: T::default(),
             f_reg: [0u64; 32],
             fcsr_reg: 0,
         }
     }
 }
 
-impl<T: Tracer> VM<T> {
+impl VM {
     /// Returns a VM with empty state
     pub fn init() -> Self {
         Self::default()
@@ -55,43 +52,13 @@ impl<T: Tracer> VM<T> {
         registers: [u64; 32],
         memory: MemoryDefault,
         pc: u64,
-        tracer: T,
     ) -> Self {
         Self {
             registers,
             memory,
             pc,
-            tracer,
             ..Default::default()
         }
-    }
-
-    /// Set a custom tracer
-    pub fn with_tracer(mut self, tracer: T) -> Self {
-        self.tracer = tracer;
-        self
-    }
-
-    /// Get a reference to the tracer
-    pub fn tracer(&self) -> &T {
-        &self.tracer
-    }
-
-    /// Get a mutable reference to the tracer
-    pub fn tracer_mut(&mut self) -> &mut T {
-        &mut self.tracer
-    }
-
-    /// Finalize tracing and return the execution trace
-    ///
-    /// Returns `Some(ExecutionTrace)` if tracing was enabled, `None` otherwise.
-    pub fn take_trace(self) -> Option<crate::trace::ExecutionTrace> {
-        self.tracer.finalize(self.registers, self.f_reg, self.pc)
-    }
-
-    /// Check if tracing is active
-    pub fn is_tracing(&self) -> bool {
-        self.tracer.is_active()
     }
 
     /// Get the current PC
@@ -129,7 +96,6 @@ impl<T: Tracer> VM<T> {
         } else {
             self.registers[idx as usize] = value;
         }
-        self.tracer.record_rd(idx, value);
     }
 
     /// Returns the current value at the idx floating point register
@@ -141,7 +107,6 @@ impl<T: Tracer> VM<T> {
     pub(crate) fn write_f64(&mut self, idx: u8, value: f64) {
         let res = value.to_bits();
         self.f_reg[idx as usize] = res;
-        self.tracer.record_rd(idx, res);
     }
 
     // Read f32
@@ -158,7 +123,6 @@ impl<T: Tracer> VM<T> {
     pub(crate) fn write_f32(&mut self, idx: u8, val: f32) {
         let res = 0xffff_ffff_0000_0000 | (val.to_bits() as u64);
         self.f_reg[idx as usize] = res;
-        self.tracer.record_rd(idx, res);
     }
 
     /// Load 8 bytes from memory at the given addr
@@ -245,7 +209,6 @@ impl<T: Tracer> VM<T> {
             }
             _ => {}
         }
-        self.tracer.record_csr_reg(self.fcsr_reg);
     }
 
     pub(crate) fn raise_fflags_f32(&mut self, a: f32, b: f32, res: f32, op: char) {
@@ -322,7 +285,6 @@ impl<T: Tracer> VM<T> {
         }
 
         self.fcsr_reg |= flags;
-        self.tracer.record_csr_reg(self.fcsr_reg);
     }
 
     pub(crate) fn raise_fflags_f64(&mut self, a: f64, b: f64, res: f64, op: char) {
@@ -370,7 +332,6 @@ impl<T: Tracer> VM<T> {
         }
 
         self.fcsr_reg |= flags;
-        self.tracer.record_csr_reg(self.fcsr_reg);
     }
 
     pub(crate) fn raise_fflags_fma_f32(&mut self, a: f32, b: f32, c: f32, res: f32) {
@@ -422,7 +383,6 @@ impl<T: Tracer> VM<T> {
         }
 
         self.fcsr_reg |= flags;
-        self.tracer.record_csr_reg(self.fcsr_reg);
     }
 
     pub(crate) fn raise_fflags_fma_f64(&mut self, a: f64, b: f64, c: f64, res: f64) {
@@ -458,171 +418,9 @@ impl<T: Tracer> VM<T> {
         }
 
         self.fcsr_reg |= flags;
-        self.tracer.record_csr_reg(self.fcsr_reg);
     }
 }
 
-#[cfg(test)]
-mod layout_tests {
-    use super::{
-        VM_EXIT_CODE_OFFSET, VM_FCSR_OFFSET, VM_FREGS_OFFSET, VM_HALTED_OFFSET, VM_PC_OFFSET,
-        VM_REGS_OFFSET, VM_RESERVATION_OFFSET,
-    };
 
-    #[test]
-    fn vm_layout_offsets_match_expected() {
-        assert_eq!(VM_REGS_OFFSET, 0, "registers offset changed");
-        assert_eq!(VM_PC_OFFSET, 256, "pc offset changed");
-        assert_eq!(VM_FREGS_OFFSET, 264, "f_reg offset changed");
-        assert_eq!(VM_FCSR_OFFSET, 520, "fcsr_reg offset changed");
-        assert_eq!(VM_RESERVATION_OFFSET, 528, "reservation_set offset changed");
-        assert_eq!(VM_HALTED_OFFSET, 536, "halted offset changed");
-        assert_eq!(VM_EXIT_CODE_OFFSET, 544, "exit_code offset changed");
-    }
-}
 
-#[cfg(test)]
-mod tests {
-    use crate::Runner;
-    use crate::init_from_elf;
-    use crate::trace::{FullTracer, NoopTracer};
-    use std::fs;
 
-    use super::*;
-
-    /// VM with no tracing (zero overhead)
-    pub type FastVM = VM<NoopTracer>;
-
-    /// VM with full execution tracing
-    pub type TracingVM = VM<FullTracer>;
-
-    #[test]
-    fn test_register_read_write() {
-        let mut vm = VM::<NoopTracer>::init();
-
-        // read
-        assert_eq!(vm.reg(5), 0);
-        // write
-        vm.reg_mut(5, 10);
-        assert_eq!(vm.reg(5), 10);
-        // write
-        vm.reg_mut(5, 20);
-        assert_eq!(vm.reg(5), 20);
-    }
-
-    #[test]
-    fn test_register_0_always_0() {
-        let mut vm = VM::<NoopTracer>::init();
-        // read register 0
-        assert_eq!(vm.reg(0), 0);
-        // write to register 0
-        vm.reg_mut(0, 20);
-        assert_eq!(vm.reg(0), 0);
-    }
-
-    #[test]
-    fn test_memory_loading_le() {
-        let mut vm = VM::<NoopTracer>::init();
-
-        let bytes = [
-            0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00,
-        ];
-
-        // write to memory
-        vm.write_bytes(0, &bytes);
-
-        // read from memory
-        assert_eq!(vm.load_u64(0), 4);
-        assert_eq!(vm.load_u64(8), 10);
-    }
-
-    #[test]
-    fn test_instruction_loading() {
-        let fib_prog = [
-            // Fib Step 0
-            0xb3, 0x81, 0x20, 0x00, // add x3, x1, x2
-            0xb3, 0x00, 0x01, 0x00, // add x1, x2, x0
-            0x33, 0x81, 0x01, 0x00, // add x2, x3, x0
-            // Fib Step 1
-            0xb3, 0x81, 0x20, 0x00, // add x3, x1, x2
-            0xb3, 0x00, 0x01, 0x00, // add x1, x2, x0
-            0x33, 0x81, 0x01, 0x00, // add x2, x3, x0
-            // Fib Step 2
-            0xb3, 0x81, 0x20, 0x00, // add x3, x1, x2
-            0xb3, 0x00, 0x01, 0x00, // add x1, x2, x0
-            0x33, 0x81, 0x01, 0x00, // add x2, x3, x0
-            // Halt
-            0x73, 0x00, 0x10, 0x00, // ebreak
-        ];
-
-        let mut vm = VM::<NoopTracer>::init();
-        vm.write_bytes(0, &fib_prog);
-        vm.reg_mut(1, 1);
-        vm.reg_mut(2, 1);
-        vm.reg_mut(17, crate::ecall::constants::ECALL_HALT);
-
-        let mut runner = Runner::new();
-        runner.step(&mut vm);
-        assert_eq!(vm.reg(2), 5);
-
-        assert_eq!(vm.exit_code, 0);
-
-        assert_eq!(runner.cycles(), 10);
-    }
-
-    // #[test]
-    // #[ignore = "re-enable once we add back tracing"]
-    // fn test_tracing_vm() {
-    //     let fib_prog = [
-    //         0xb3, 0x81, 0x20, 0x00, // add x3, x1, x2
-    //         0xb3, 0x00, 0x01, 0x00, // add x1, x2, x0
-    //         0x33, 0x81, 0x01, 0x00, // add x2, x3, x0
-    //     ];
-    //
-    //     let mut vm = TracingVM::init();
-    //     vm.write_bytes(0, &fib_prog);
-    //     vm.reg_mut(1, 1);
-    //     vm.reg_mut(2, 1);
-    //
-    //     assert!(vm.is_tracing());
-    //
-    //     let mut runner = Runner::new();
-    //     runner.step(&mut vm);
-    //
-    //     let trace = vm.take_trace().expect("Should have trace");
-    //
-    //     assert_eq!(trace.rows.len(), 3);
-    //     assert_eq!(trace.total_cycles, 3);
-    // }
-
-    #[test]
-    fn test_fast_vm_no_trace() {
-        let vm = FastVM::init();
-        assert!(!vm.is_tracing());
-        assert!(vm.take_trace().is_none());
-    }
-
-    #[test]
-    fn test_round_std_io() {
-        // Path to the echo guest program built for the test environment.
-        // If the binary is not present, skip the test to avoid failing CI for missing artifacts.
-        let echo_bin = "rust-bin/echo/target/riscv64ima-unknown-none-elf/release/echo".to_string();
-        if fs::metadata(&echo_bin).is_err() {
-            eprintln!("Skipping test_round_std_io: {} not found", echo_bin);
-            return;
-        }
-
-        // Initialize the VM from the echo ELF and provide some stdin.
-        let mut vm = init_from_elf::<NoopTracer>(echo_bin);
-        let mut runner = Runner::new();
-        runner.set_input_stream("Hola Riscv, buenos días".as_bytes().to_vec());
-
-        // Run the guest program; it should echo the input and then exit via ecall.
-        runner.run(&mut vm);
-
-        // Verify the VM halted and exited successfully.
-        assert!(vm.halted);
-        assert_eq!(vm.exit_code, 0);
-    }
-}

@@ -1,7 +1,7 @@
-use crate::{VM, ecall::constants, trace::Tracer};
+use crate::{ecall::constants, VM};
 
 /// @dev this function would heavily be designed following the Linux ABI
-pub fn handle_stdout<T: Tracer>(vm: &mut VM<T>) {
+pub fn handle_stdout(vm: &mut VM) {
     // Arguments according to RISC-V calling convention:
     // a0 (x10) = File Descriptor
     // a1 (x11) = Buffer Pointer (Guest Virtual Address)

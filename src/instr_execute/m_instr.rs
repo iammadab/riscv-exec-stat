@@ -1,65 +1,59 @@
 // M Extension - Multiplication
 
-use crate::VM;
 use crate::decode::R;
-use crate::trace::Tracer;
 use crate::util::{mask, sext};
+use crate::VM;
 
 #[inline(always)]
-pub(crate) fn execute_mul<T: Tracer>(vm: &mut VM<T>, insn: &R) {
+pub(crate) fn execute_mul(vm: &mut VM, insn: &R) {
     let a = vm.reg(insn.rs1) as i64;
     let b = vm.reg(insn.rs2) as i64;
     let full = (a as i128).wrapping_mul(b as i128);
     let result = a.wrapping_mul(b) as u64;
-    vm.tracer.record_mul(result, (full >> 64) as u64);
     vm.reg_mut(insn.rd, result);
 }
 
 #[inline(always)]
-pub(crate) fn execute_mulh<T: Tracer>(vm: &mut VM<T>, insn: &R) {
+pub(crate) fn execute_mulh(vm: &mut VM, insn: &R) {
     let a = (vm.reg(insn.rs1) as i64) as i128;
     let b = (vm.reg(insn.rs2) as i64) as i128;
     let full = a.wrapping_mul(b);
     let lo = full as u64;
     let hi = (full >> 64) as u64;
-    vm.tracer.record_mul(lo, hi);
     vm.reg_mut(insn.rd, hi);
 }
 
 #[inline(always)]
-pub(crate) fn execute_mulhsu<T: Tracer>(vm: &mut VM<T>, insn: &R) {
+pub(crate) fn execute_mulhsu(vm: &mut VM, insn: &R) {
     let a = (vm.reg(insn.rs1) as i64) as i128;
     let b = (vm.reg(insn.rs2) as u128) as i128;
     let full = a.wrapping_mul(b);
     let lo = full as u64;
     let hi = (full >> 64) as u64;
-    vm.tracer.record_mul(lo, hi);
     vm.reg_mut(insn.rd, hi);
 }
 
 #[inline(always)]
-pub(crate) fn execute_mulhu<T: Tracer>(vm: &mut VM<T>, insn: &R) {
+pub(crate) fn execute_mulhu(vm: &mut VM, insn: &R) {
     let a = vm.reg(insn.rs1) as u128;
     let b = vm.reg(insn.rs2) as u128;
     let full = a.wrapping_mul(b);
     let lo = full as u64;
     let hi = (full >> 64) as u64;
-    vm.tracer.record_mul(lo, hi);
     vm.reg_mut(insn.rd, hi);
 }
 
 #[inline(always)]
-pub(crate) fn execute_mulw<T: Tracer>(vm: &mut VM<T>, insn: &R) {
+pub(crate) fn execute_mulw(vm: &mut VM, insn: &R) {
     let a = vm.reg(insn.rs1);
     let b = vm.reg(insn.rs2);
     let product = a.wrapping_mul(b);
     let result = (((product & mask(32)) as i32) as i64) as u64;
-    vm.tracer.record_mul(product & mask(32), 0);
     vm.reg_mut(insn.rd, result);
 }
 
 #[inline(always)]
-pub(crate) fn execute_div<T: Tracer>(vm: &mut VM<T>, insn: &R) {
+pub(crate) fn execute_div(vm: &mut VM, insn: &R) {
     let dividend = vm.reg(insn.rs1) as i64;
     let divisor = vm.reg(insn.rs2) as i64;
     let result = if divisor == 0 {
@@ -73,7 +67,7 @@ pub(crate) fn execute_div<T: Tracer>(vm: &mut VM<T>, insn: &R) {
 }
 
 #[inline(always)]
-pub(crate) fn execute_divu<T: Tracer>(vm: &mut VM<T>, insn: &R) {
+pub(crate) fn execute_divu(vm: &mut VM, insn: &R) {
     let dividend = vm.reg(insn.rs1);
     let divisor = vm.reg(insn.rs2);
     let result = if divisor == 0 {
@@ -85,7 +79,7 @@ pub(crate) fn execute_divu<T: Tracer>(vm: &mut VM<T>, insn: &R) {
 }
 
 #[inline(always)]
-pub(crate) fn execute_rem<T: Tracer>(vm: &mut VM<T>, insn: &R) {
+pub(crate) fn execute_rem(vm: &mut VM, insn: &R) {
     let dividend = vm.reg(insn.rs1) as i64;
     let divisor = vm.reg(insn.rs2) as i64;
     let result = if divisor == 0 {
@@ -99,7 +93,7 @@ pub(crate) fn execute_rem<T: Tracer>(vm: &mut VM<T>, insn: &R) {
 }
 
 #[inline(always)]
-pub(crate) fn execute_remu<T: Tracer>(vm: &mut VM<T>, insn: &R) {
+pub(crate) fn execute_remu(vm: &mut VM, insn: &R) {
     let dividend = vm.reg(insn.rs1);
     let divisor = vm.reg(insn.rs2);
     let result = if divisor == 0 {
@@ -111,7 +105,7 @@ pub(crate) fn execute_remu<T: Tracer>(vm: &mut VM<T>, insn: &R) {
 }
 
 #[inline(always)]
-pub(crate) fn execute_divw<T: Tracer>(vm: &mut VM<T>, insn: &R) {
+pub(crate) fn execute_divw(vm: &mut VM, insn: &R) {
     let dividend = (vm.reg(insn.rs1) & mask(32)) as i32;
     let divisor = (vm.reg(insn.rs2) & mask(32)) as i32;
     let result = if divisor == 0 {
@@ -125,7 +119,7 @@ pub(crate) fn execute_divw<T: Tracer>(vm: &mut VM<T>, insn: &R) {
 }
 
 #[inline(always)]
-pub(crate) fn execute_divuw<T: Tracer>(vm: &mut VM<T>, insn: &R) {
+pub(crate) fn execute_divuw(vm: &mut VM, insn: &R) {
     let dividend = (vm.reg(insn.rs1) & mask(32)) as u32;
     let divisor = (vm.reg(insn.rs2) & mask(32)) as u32;
     let result = if divisor == 0 {
@@ -137,7 +131,7 @@ pub(crate) fn execute_divuw<T: Tracer>(vm: &mut VM<T>, insn: &R) {
 }
 
 #[inline(always)]
-pub(crate) fn execute_remw<T: Tracer>(vm: &mut VM<T>, insn: &R) {
+pub(crate) fn execute_remw(vm: &mut VM, insn: &R) {
     let dividend = (vm.reg(insn.rs1) & mask(32)) as i32;
     let divisor = (vm.reg(insn.rs2) & mask(32)) as i32;
     let result = if divisor == 0 {
@@ -151,7 +145,7 @@ pub(crate) fn execute_remw<T: Tracer>(vm: &mut VM<T>, insn: &R) {
 }
 
 #[inline(always)]
-pub(crate) fn execute_remuw<T: Tracer>(vm: &mut VM<T>, insn: &R) {
+pub(crate) fn execute_remuw(vm: &mut VM, insn: &R) {
     let dividend = (vm.reg(insn.rs1) & mask(32)) as u32;
     let divisor = (vm.reg(insn.rs2) & mask(32)) as u32;
     let result = if divisor == 0 {

@@ -1,6 +1,6 @@
-use crate::{VM, trace::Tracer};
+use crate::VM;
 
-pub fn handle_halt<T: Tracer>(vm: &mut VM<T>) {
+pub fn handle_halt(vm: &mut VM) {
     vm.halted = true;
     vm.exit_code = vm.reg(10);
 }

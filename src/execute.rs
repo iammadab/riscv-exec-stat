@@ -1,17 +1,14 @@
-use crate::HostIO;
-use crate::VM;
 use crate::decode::Instruction;
 use crate::ecall::handle_ecall;
 use crate::instr_execute::a_instr::*;
 use crate::instr_execute::csr_instr::*;
-use crate::instr_execute::d_instr::*;
-use crate::instr_execute::f_instr::*;
 use crate::instr_execute::i_instr::*;
 use crate::instr_execute::m_instr::*;
-use crate::trace::Tracer;
+use crate::HostIO;
+use crate::VM;
 
 // TODO consider cleaning up sext logic
-impl<T: Tracer> VM<T> {
+impl VM {
     pub(crate) fn execute_instruction(
         &mut self,
         insn: &Instruction,
@@ -201,131 +198,6 @@ impl<T: Tracer> VM<T> {
 
             Instruction::AmoMaxuD(insn) => execute_amo_maxu_d(self, insn),
 
-            // F instructions
-            Instruction::FmaddS(insn) => execute_fmadd_s(self, insn),
-
-            Instruction::FmsubS(insn) => execute_fmsub_s(self, insn),
-
-            Instruction::FnmsubS(insn) => execute_fnmsub_s(self, insn),
-
-            Instruction::FnmaddS(insn) => execute_fnmadd_s(self, insn),
-
-            Instruction::FaddS(insn) => execute_fadd_s(self, insn),
-
-            Instruction::FsubS(insn) => execute_fsub_s(self, insn),
-
-            Instruction::FmulS(insn) => execute_fmul_s(self, insn),
-
-            Instruction::FdivS(insn) => execute_fdiv_s(self, insn),
-
-            Instruction::FsqrtS(insn) => execute_fsqrt_s(self, insn),
-
-            Instruction::FsgnjS(insn) => execute_fsgnj_s(self, insn),
-
-            Instruction::FsgnjnS(insn) => execute_fsgnjn_s(self, insn),
-
-            Instruction::FsgnjxS(insn) => execute_fsgnjx_s(self, insn),
-
-            Instruction::FminS(insn) => execute_fmin_s(self, insn),
-
-            Instruction::FmaxS(insn) => execute_fmax_s(self, insn),
-
-            Instruction::FcvtWS(insn) => execute_fcvt_ws(self, insn),
-
-            Instruction::FcvtWuS(insn) => execute_fcvt_wu_s(self, insn),
-
-            Instruction::FmvXW(insn) => execute_fmv_xw(self, insn),
-
-            Instruction::FeqS(insn) => execute_feq_s(self, insn),
-
-            Instruction::FltS(insn) => execute_flt_s(self, insn),
-
-            Instruction::FleS(insn) => execute_fle_s(self, insn),
-
-            Instruction::FclassS(insn) => execute_fclass_s(self, insn),
-
-            Instruction::FcvtSW(insn) => execute_fcvt_sw(self, insn),
-
-            Instruction::FcvtSWu(insn) => execute_fcvt_swu(self, insn),
-
-            Instruction::FmvWX(insn) => execute_fmv_wx(self, insn),
-
-            Instruction::FmaddD(insn) => execute_fmadd_d(self, insn),
-
-            Instruction::FmsubD(insn) => execute_fmsub_d(self, insn),
-
-            Instruction::FnmsubD(insn) => execute_fnmsub_d(self, insn),
-
-            Instruction::FnmaddD(insn) => execute_fnmadd_d(self, insn),
-
-            Instruction::FaddD(insn) => execute_fadd_d(self, insn),
-
-            Instruction::FsubD(insn) => execute_fsub_d(self, insn),
-
-            Instruction::FmulD(insn) => execute_fmul_d(self, insn),
-
-            Instruction::FdivD(insn) => execute_fdiv_d(self, insn),
-
-            Instruction::FsqrtD(insn) => execute_fsqrt_d(self, insn),
-
-            Instruction::FsgnjD(insn) => execute_fsgnj_d(self, insn),
-
-            Instruction::FsgnjnD(insn) => execute_fsgnjn_d(self, insn),
-
-            Instruction::FsgnjxD(insn) => execute_fsgnjx_d(self, insn),
-
-            Instruction::FminD(insn) => execute_fmin_d(self, insn),
-
-            Instruction::FmaxD(insn) => execute_fmax_d(self, insn),
-
-            Instruction::FcvtSD(insn) => execute_fcvt_sd(self, insn),
-
-            Instruction::FcvtDS(insn) => execute_fcvt_ds(self, insn),
-
-            Instruction::FeqD(insn) => execute_feq_d(self, insn),
-
-            Instruction::FltD(insn) => execute_flt_d(self, insn),
-
-            Instruction::FleD(insn) => execute_fle_d(self, insn),
-
-            Instruction::FclassD(insn) => execute_fclass_d(self, insn),
-
-            Instruction::FcvtWD(insn) => execute_fcvt_wd(self, insn),
-
-            Instruction::FcvtWuD(insn) => execute_fcvt_wu_d(self, insn),
-
-            Instruction::FcvtDW(insn) => execute_fcvt_dw(self, insn),
-
-            Instruction::FcvtDWu(insn) => execute_fcvt_dwu(self, insn),
-
-            Instruction::Flw(insn) => execute_flw(self, insn),
-
-            Instruction::Fsw(insn) => execute_fsw(self, insn),
-
-            Instruction::Fld(insn) => execute_fld(self, insn),
-
-            Instruction::Fsd(insn) => execute_fsd(self, insn),
-
-            Instruction::FcvtLS(insn) => execute_fcvt_ls(self, insn),
-
-            Instruction::FcvtLuS(insn) => execute_fcvt_lu_s(self, insn),
-
-            Instruction::FcvtSL(insn) => execute_fcvt_sl(self, insn),
-
-            Instruction::FcvtSLu(insn) => execute_fcvt_slu(self, insn),
-
-            Instruction::FcvtLD(insn) => execute_fcvt_ld(self, insn),
-
-            Instruction::FcvtLuD(insn) => execute_fcvt_lu_d(self, insn),
-
-            Instruction::FmvXD(insn) => execute_fmv_xd(self, insn),
-
-            Instruction::FcvtDL(insn) => execute_fcvt_dl(self, insn),
-
-            Instruction::FcvtDLu(insn) => execute_fcvt_dlu(self, insn),
-
-            Instruction::FmvDX(insn) => execute_fmv_dx(self, insn),
-
             // CSR instructions
             Instruction::Csrrw(insn) => execute_csrrw(self, insn),
 
@@ -354,10 +226,9 @@ impl<T: Tracer> VM<T> {
 mod test {
     use crate::decode::decode;
     use crate::ecall::constants;
-    use crate::trace::NoopTracer;
     use crate::{HostIO, VM};
 
-    fn run_insn(vm: &mut VM<NoopTracer>, io: &mut HostIO, insn: u32, is_compressed: bool) {
+    fn run_insn(vm: &mut VM, io: &mut HostIO, insn: u32, is_compressed: bool) {
         let current_pc = vm.pc();
         let next_pc = current_pc.wrapping_add(if is_compressed { 2 } else { 4 });
         vm.set_pc(next_pc);
@@ -367,7 +238,7 @@ mod test {
 
     #[test]
     fn test_add_instruction() {
-        let mut vm = VM::<NoopTracer>::init();
+        let mut vm = VM::init();
         let mut io = HostIO::new();
         vm.reg_mut(3, 12);
         vm.reg_mut(5, 32);
@@ -380,7 +251,7 @@ mod test {
 
     #[test]
     fn test_store_byte() {
-        let mut vm = VM::<NoopTracer>::init();
+        let mut vm = VM::init();
         let mut io = HostIO::new();
         vm.reg_mut(3, 12);
         vm.reg_mut(2, 5);
@@ -392,7 +263,7 @@ mod test {
 
     #[test]
     fn test_store_half_word() {
-        let mut vm = VM::<NoopTracer>::init();
+        let mut vm = VM::init();
         let mut io = HostIO::new();
         vm.reg_mut(3, 64008);
         vm.reg_mut(2, 5);
@@ -405,7 +276,7 @@ mod test {
 
     #[test]
     fn test_store_word() {
-        let mut vm = VM::<NoopTracer>::init();
+        let mut vm = VM::init();
         let mut io = HostIO::new();
         vm.reg_mut(3, 2299561908);
         vm.reg_mut(2, 5);
@@ -419,7 +290,7 @@ mod test {
 
     #[test]
     fn test_store_double_word() {
-        let mut vm = VM::<NoopTracer>::init();
+        let mut vm = VM::init();
         let mut io = HostIO::new();
         vm.reg_mut(3, 1234567898765432123);
         vm.reg_mut(2, 5);
@@ -436,7 +307,7 @@ mod test {
 
     #[test]
     fn test_jal_opcode() {
-        let mut vm = VM::<NoopTracer>::init();
+        let mut vm = VM::init();
         let mut io = HostIO::new();
         vm.set_pc(8);
         // 0xC001EF = Instruction::Jal(J { rd: 3, imm: 12 });
@@ -448,7 +319,7 @@ mod test {
 
     #[test]
     fn test_jalr_opcode() {
-        let mut vm = VM::<NoopTracer>::init();
+        let mut vm = VM::init();
         let mut io = HostIO::new();
         vm.set_pc(8);
         vm.reg_mut(5, 6);
@@ -461,7 +332,7 @@ mod test {
 
     #[test]
     fn test_ecall_stdin() {
-        let mut vm = VM::<NoopTracer>::init();
+        let mut vm = VM::init();
         let mut io = HostIO::new();
 
         // Prepare an input stream "hello"
@@ -486,7 +357,7 @@ mod test {
 
     #[test]
     fn test_ecall_stdout() {
-        let mut vm = VM::<NoopTracer>::init();
+        let mut vm = VM::init();
         let mut io = HostIO::new();
 
         // Write "world" into guest memory at address 0
