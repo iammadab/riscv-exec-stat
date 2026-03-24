@@ -1,0 +1,118 @@
+use serde::Deserialize;
+
+use crate::decode::insn_formats::{Sh, B, I, J, R, S, U};
+
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq)]
+pub(crate) enum Instruction {
+    Add(R),
+    Sub(R),
+    Sll(R),
+    Slt(R),
+    Sltu(R),
+    Xor(R),
+    Srl(R),
+    Sra(R),
+    Or(R),
+    And(R),
+    Addi(I),
+    Slti(I),
+    Sltiu(I),
+    Xori(I),
+    Ori(I),
+    Andi(I),
+    Slli(Sh),
+    Srli(Sh),
+    Srai(Sh),
+    Lb(I),
+    Lh(I),
+    Lw(I),
+    Lbu(I),
+    Lhu(I),
+    Sb(S),
+    Sh(S),
+    Sw(S),
+    Beq(B),
+    Bne(B),
+    Blt(B),
+    Bge(B),
+    Bltu(B),
+    Bgeu(B),
+    Jal(J),
+    Jalr(I),
+    Lui(U),
+    Auipc(U),
+    Ecall,
+    Ebreak,
+    Nop,
+    Eother,
+    Addw(R),
+    Subw(R),
+    Sllw(R),
+    Srlw(R),
+    Sraw(R),
+    Addiw(I),
+    Slliw(Sh),
+    Srliw(Sh),
+    Sraiw(Sh),
+    Ld(I),
+    Lwu(I),
+    Sd(S),
+    Mul(R),
+    Mulh(R),
+    Mulhsu(R),
+    Mulhu(R),
+    Div(R),
+    Divu(R),
+    Rem(R),
+    Remu(R),
+    Mulw(R),
+    Divw(R),
+    Divuw(R),
+    Remw(R),
+    Remuw(R),
+    LrW(R),
+    ScW(R),
+    AmoSwapW(R),
+    AmoAddW(R),
+    AmoXorW(R),
+    AmoAndW(R),
+    AmoOrW(R),
+    AmoMinW(R),
+    AmoMaxW(R),
+    AmoMinuW(R),
+    AmoMaxuW(R),
+    LrD(R),
+    ScD(R),
+    AmoSwapD(R),
+    AmoAddD(R),
+    AmoXorD(R),
+    AmoAndD(R),
+    AmoOrD(R),
+    AmoMinD(R),
+    AmoMaxD(R),
+    AmoMinuD(R),
+    AmoMaxuD(R),
+    Csrrw(I),
+    Csrrs(I),
+    Csrrc(I),
+    Csrrwi(I),
+    Csrrsi(I),
+    Csrrci(I),
+    Illegal(u32),
+}
+
+impl Instruction {
+    pub fn is_branch_or_jmp(&self) -> bool {
+        matches!(
+            self,
+            Self::Beq(_)
+                | Self::Bne(_)
+                | Self::Blt(_)
+                | Self::Bltu(_)
+                | Self::Bge(_)
+                | Self::Bgeu(_)
+                | Self::Jal(_)
+                | Self::Jalr(_)
+        )
+    }
+}
