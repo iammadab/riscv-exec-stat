@@ -9,6 +9,8 @@ use std::mem::offset_of;
 #[repr(C)]
 pub struct VM {
     pub(crate) registers: [u64; 32],
+    reg_reads: [u64; 32],
+    reg_writes: [u64; 32],
     pc: u64,
     pub(crate) f_reg: [u64; 32],
     pub(crate) fcsr_reg: u32,
@@ -30,6 +32,8 @@ impl Default for VM {
     fn default() -> Self {
         Self {
             registers: [0u64; 32],
+            reg_reads: [0u64; 32],
+            reg_writes: [0u64; 32],
             memory: MemoryDefault::default(),
             reservation_set: 0,
             pc: 0,
@@ -76,7 +80,8 @@ impl VM {
     }
 
     /// Returns the current value at the idx register
-    pub(crate) fn reg(&self, idx: u8) -> u64 {
+    pub(crate) fn reg(&mut self, idx: u8) -> u64 {
+        self.reg_reads[idx as usize] = self.reg_reads[idx as usize].wrapping_add(1);
         if idx == 0 {
             0
         } else {
@@ -86,11 +91,55 @@ impl VM {
 
     /// Returns a mutable reference to the idx register
     pub(crate) fn reg_mut(&mut self, idx: u8, value: u64) {
+        self.reg_writes[idx as usize] = self.reg_writes[idx as usize].wrapping_add(1);
         if idx == 0 {
             self.registers[idx as usize] = 0;
         } else {
             self.registers[idx as usize] = value;
         }
+    }
+
+    pub fn reg_reads(&self) -> &[u64; 32] {
+        &self.reg_reads
+    }
+
+    pub fn reg_writes(&self) -> &[u64; 32] {
+        &self.reg_writes
+    }
+
+    pub fn reg_accesses(&self) -> [u64; 32] {
+        let mut totals = [0u64; 32];
+        for (i, item) in totals.iter_mut().enumerate() {
+            *item = self.reg_reads[i].wrapping_add(self.reg_writes[i]);
+        }
+        totals
+    }
+
+    pub fn reg_read_probabilities(&self) -> [f64; 32] {
+        Self::normalize_counts(&self.reg_reads)
+    }
+
+    pub fn reg_write_probabilities(&self) -> [f64; 32] {
+        Self::normalize_counts(&self.reg_writes)
+    }
+
+    pub fn reg_access_probabilities(&self) -> [f64; 32] {
+        let counts = self.reg_accesses();
+        Self::normalize_counts(&counts)
+    }
+
+    fn normalize_counts(counts: &[u64; 32]) -> [f64; 32] {
+        let total: u64 = counts.iter().sum();
+        if total == 0 {
+            return [0.0; 32];
+        }
+
+        let denom = total as f64;
+        let mut probs = [0.0; 32];
+        for (i, item) in probs.iter_mut().enumerate() {
+            *item = counts[i] as f64 / denom;
+        }
+        probs
     }
 
     /// Returns the current value at the idx floating point register
@@ -204,5 +253,65 @@ impl VM {
             }
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::VM;
+
+    #[test]
+    fn tracks_register_reads_writes_including_x0() {
+        let mut vm = VM::init();
+
+        vm.reg_mut(0, 123);
+        vm.reg_mut(5, 42);
+        let _ = vm.reg(0);
+        let _ = vm.reg(5);
+
+        assert_eq!(vm.reg(0), 0);
+        assert_eq!(vm.reg(5), 42);
+
+        assert_eq!(vm.reg_writes()[0], 1);
+        assert_eq!(vm.reg_writes()[5], 1);
+        assert_eq!(vm.reg_reads()[0], 2);
+        assert_eq!(vm.reg_reads()[5], 2);
+    }
+
+    #[test]
+    fn computes_access_and_probability_vectors() {
+        let mut vm = VM::init();
+
+        let _ = vm.reg(1);
+        let _ = vm.reg(1);
+        vm.reg_mut(1, 7);
+        let _ = vm.reg(2);
+        vm.reg_mut(2, 9);
+
+        let accesses = vm.reg_accesses();
+        assert_eq!(accesses[1], 3);
+        assert_eq!(accesses[2], 2);
+
+        let read_probs = vm.reg_read_probabilities();
+        assert!((read_probs[1] - (2.0 / 3.0)).abs() < 1e-12);
+        assert!((read_probs[2] - (1.0 / 3.0)).abs() < 1e-12);
+
+        let write_probs = vm.reg_write_probabilities();
+        assert!((write_probs[1] - 0.5).abs() < 1e-12);
+        assert!((write_probs[2] - 0.5).abs() < 1e-12);
+
+        let access_probs = vm.reg_access_probabilities();
+        let sum: f64 = access_probs.iter().sum();
+        assert!((sum - 1.0).abs() < 1e-12);
+        assert!((access_probs[1] - 0.6).abs() < 1e-12);
+        assert!((access_probs[2] - 0.4).abs() < 1e-12);
+    }
+
+    #[test]
+    fn probability_vectors_are_zero_when_no_accesses() {
+        let vm = VM::init();
+        assert!(vm.reg_read_probabilities().iter().all(|v| *v == 0.0));
+        assert!(vm.reg_write_probabilities().iter().all(|v| *v == 0.0));
+        assert!(vm.reg_access_probabilities().iter().all(|v| *v == 0.0));
     }
 }
